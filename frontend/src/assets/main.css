@@ -1,35 +1,217 @@
-@import './base.css';
+:root {
+  /* Surfaces */
+  --bg: #0b0d10;
+  --surface: #15181d;
+  --surface-2: #1b1f26;
+  --surface-3: #232831;
+  --border: #2a2f38;
+
+  /* Text */
+  --text: #f3f5f7;
+  --text-muted: #9aa1ab;
+  --text-dim: #6b727c;
+
+  /* Accent (gold) */
+  --gold: #e7b23c;
+  --gold-hover: #f0c057;
+  --gold-ink: #1a1206;
+
+  /* Market colors (KR convention) */
+  --up: #f2554a;
+  --down: #4a90e2;
+
+  --danger: #e05a5a;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --maxw: 1180px;
+
+  --font: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Malgun Gothic', 'Segoe UI', Roboto, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  display: flex;
+  flex-direction: column;
 }
 
-a,
-.green {
+a {
+  color: inherit;
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+button {
+  font-family: inherit;
+  cursor: pointer;
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+/* ---- Shared building blocks ---- */
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 11px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+.btn-primary:hover {
+  background: var(--gold-hover);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn-ghost:hover {
+  background: var(--surface-2);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Form fields */
+.field {
+  margin-bottom: 18px;
+}
+.field > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 12px 14px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input::placeholder {
+  color: var(--text-dim);
+}
+.input:focus {
+  border-color: var(--gold);
+}
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+.input-group .input {
+  flex: 1;
+}
+.input-affix {
+  position: relative;
+}
+.input-affix .input {
+  padding-right: 44px;
+}
+.input-affix .toggle-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 6px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.field-error {
+  margin-top: 7px;
+  font-size: 12.5px;
+  color: var(--danger);
+}
+.field-hint {
+  margin-top: 7px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.field-ok {
+  margin-top: 7px;
+  font-size: 12.5px;
+  color: #57c98a;
+}
+
+.form-error {
+  background: rgba(224, 90, 90, 0.12);
+  border: 1px solid rgba(224, 90, 90, 0.35);
+  color: #f1a3a3;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+.text-gold {
+  color: var(--gold);
 }
