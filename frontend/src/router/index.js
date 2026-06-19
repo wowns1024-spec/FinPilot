@@ -1,23 +1,65 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/', name: 'home', component: HomeView },
     {
-      path: '/',
-      name: 'home',
-      component: HomeView,
+      path: '/signup',
+      name: 'signup',
+      component: () => import('../views/SignupView.vue'),
+      meta: { guestOnly: true },
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/LoginView.vue'),
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/mypage',
+      name: 'mypage',
+      component: () => import('../views/MyPageView.vue'),
+      meta: { requiresAuth: true },
+    },
+    // F200~F700: 추후 구현 (네비게이션 자리표시자)
+    {
+      path: '/recommend',
+      name: 'recommend',
+      component: () => import('../views/ComingSoonView.vue'),
+      meta: { title: 'AI 종목 추천', requiresAuth: true },
+    },
+    {
+      path: '/stocks',
+      name: 'stocks',
+      component: () => import('../views/ComingSoonView.vue'),
+      meta: { title: '종목 조회' },
+    },
+    {
+      path: '/news',
+      name: 'news',
+      component: () => import('../views/ComingSoonView.vue'),
+      meta: { title: '뉴스' },
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: () => import('../views/ComingSoonView.vue'),
+      meta: { title: '주식 용어' },
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.guestOnly && auth.isAuthenticated) {
+    return { name: 'home' }
+  }
 })
 
 export default router
