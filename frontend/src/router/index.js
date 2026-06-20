@@ -40,8 +40,7 @@ const router = createRouter({
     {
       path: '/stocks',
       name: 'stocks',
-      component: () => import('../views/ComingSoonView.vue'),
-      meta: { title: '종목 조회' },
+      component: () => import('../views/StockLookupView.vue'),
     },
     {
       path: '/news',

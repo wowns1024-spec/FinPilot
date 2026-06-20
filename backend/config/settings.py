@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "accounts",
     "investments",
     "recommendations",
+    "stocks",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -174,3 +175,12 @@ GMS_API_URL = os.environ.get(
     "https://gms.ssafy.io/gmsapi/api.openai.com/v1/responses",
 )
 GMS_MODEL = os.environ.get("GMS_MODEL", "gpt-4.1")
+
+TOSS_API_BASE_URL = os.environ.get(
+    "TOSS_API_BASE_URL", "https://openapi.tossinvest.com"
+)
+TOSS_CLIENT_ID = os.environ.get("TOSS_CLIENT_ID", "")
+TOSS_CLIENT_SECRET = os.environ.get(
+    "TOSS_CLIENT_SECRET", os.environ.get("TOSS_API_KEY", "")
+)
+TOSS_ACCESS_TOKEN = os.environ.get("TOSS_ACCESS_TOKEN", "")
