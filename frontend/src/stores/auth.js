@@ -7,6 +7,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refresh = ref(localStorage.getItem(REFRESH_KEY) || '')
   const user = ref(null)
   const investmentProfile = ref(null)
+  const recommendation = ref(null)
 
   const isAuthenticated = computed(() => !!access.value)
 
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
     setTokens('', '')
     user.value = null
     investmentProfile.value = null
+    recommendation.value = null
   }
 
   // F102 아이디 중복 확인
@@ -79,7 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
   // F200 투자성향 조회
   async function fetchInvestmentProfile() {
     try {
-      const { data } = await api.get('/accounts/investment-profile/')
+      const { data } = await api.get('/investments/profile/')
       investmentProfile.value = data
       return data
     } catch (e) {
@@ -93,7 +95,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // F207/F209 투자성향 저장/수정
   async function saveInvestmentProfile(payload) {
-    const { data } = await api.post('/accounts/investment-profile/', payload)
+    const { data } = await api.post('/investments/profile/', payload)
     investmentProfile.value = data
     if (user.value) user.value.has_investment_profile = true
     return data
@@ -101,9 +103,31 @@ export const useAuthStore = defineStore('auth', () => {
 
   // F210 투자성향 삭제
   async function deleteInvestmentProfile() {
-    await api.delete('/accounts/investment-profile/')
+    await api.delete('/investments/profile/')
     investmentProfile.value = null
     if (user.value) user.value.has_investment_profile = false
+  }
+
+  // F307 최근 AI 추천 결과 조회
+  async function fetchLatestRecommendation() {
+    try {
+      const { data } = await api.get('/recommendations/latest/')
+      recommendation.value = data
+      return data
+    } catch (e) {
+      if (e.response?.status === 404) {
+        recommendation.value = null
+        return null
+      }
+      throw e
+    }
+  }
+
+  // F301 AI 추천 요청
+  async function requestRecommendation() {
+    const { data } = await api.post('/recommendations/request/')
+    recommendation.value = data
+    return data
   }
 
   return {
@@ -111,6 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
     refresh,
     user,
     investmentProfile,
+    recommendation,
     isAuthenticated,
     setTokens,
     clear,
@@ -123,5 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchInvestmentProfile,
     saveInvestmentProfile,
     deleteInvestmentProfile,
+    fetchLatestRecommendation,
+    requestRecommendation,
   }
 })

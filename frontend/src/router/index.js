@@ -28,8 +28,8 @@ const router = createRouter({
     {
       path: '/recommend',
       name: 'recommend',
-      component: () => import('../views/ComingSoonView.vue'),
-      meta: { title: 'AI 종목 추천', requiresAuth: true },
+      component: () => import('../views/RecommendationView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/investment-profile',

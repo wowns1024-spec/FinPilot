@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "accounts",
+    "investments",
+    "recommendations",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -165,3 +167,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+GMS_API_KEY = os.environ.get("GMS_API_KEY", "")
+GMS_API_URL = os.environ.get(
+    "GMS_API_URL",
+    "https://gms.ssafy.io/gmsapi/api.openai.com/v1/responses",
+)
+GMS_MODEL = os.environ.get("GMS_MODEL", "gpt-4.1")
