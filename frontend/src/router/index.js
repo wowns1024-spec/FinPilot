@@ -24,6 +24,12 @@ const router = createRouter({
       component: () => import('../views/MyPageView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/investment-profile',
+      name: 'investment-profile',
+      component: () => import('../views/InvestmentProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
     // F200~F700: 추후 구현 (네비게이션 자리표시자)
     {
       path: '/recommend',
@@ -32,10 +38,9 @@ const router = createRouter({
       meta: { title: 'AI 종목 추천', requiresAuth: true },
     },
     {
-      path: '/stocks',
+      path: '/stocks/:code?',
       name: 'stocks',
-      component: () => import('../views/ComingSoonView.vue'),
-      meta: { title: '종목 조회' },
+      component: () => import('../views/StockListView.vue'),
     },
     {
       path: '/news',

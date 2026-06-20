@@ -1,11 +1,14 @@
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useProfileStore } from '@/stores/profile'
 
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
+const profileStore = useProfileStore()
+const { profile: invProfile } = storeToRefs(profileStore)
 const router = useRouter()
 
 const tabs = [
@@ -35,6 +38,10 @@ const joinedDate = computed(() => {
 onMounted(async () => {
   try {
     await auth.fetchMe()
+    // 투자성향 등록자만 상세를 받아온다 (미등록은 404 호출 회피)
+    if (user.value?.has_investment_profile) {
+      await profileStore.fetchProfile()
+    }
   } catch {
     /* 401 은 인터셉터/가드가 처리 */
   } finally {
@@ -202,12 +209,45 @@ async function onLogout() {
           </div>
         </template>
 
-        <!-- 투자 성향 (F200 예정) -->
+        <!-- 투자 성향 (F200) -->
         <div v-else-if="activeTab === 'investment'" class="card panel">
           <div class="panel-head"><h2>투자 성향 정보</h2></div>
-          <div class="placeholder">
+
+          <p v-if="loading" class="muted">불러오는 중...</p>
+
+          <!-- 미등록 -->
+          <div v-else-if="!user?.has_investment_profile" class="placeholder">
             <p class="muted">아직 투자 성향을 등록하지 않았습니다.</p>
-            <p class="field-hint">투자 성향 설문 기능은 준비 중입니다. (F200)</p>
+            <p class="field-hint">
+              간단한 설문으로 나의 투자 성향을 분석하고 맞춤 추천을 받아보세요.
+            </p>
+            <RouterLink to="/investment-profile" class="btn btn-primary inv-cta">
+              투자 성향 검사하기
+            </RouterLink>
+          </div>
+
+          <!-- 등록됨 -->
+          <div v-else-if="invProfile" class="inv-result">
+            <p class="inv-eyebrow muted">나의 투자 성향</p>
+            <p class="inv-risk text-gold">{{ invProfile.risk_type_display }}</p>
+            <dl class="inv-list">
+              <div><dt>투자 가능 자산</dt><dd>{{ invProfile.available_asset_display }}</dd></div>
+              <div><dt>투자 기간</dt><dd>{{ invProfile.investment_period_display }}</dd></div>
+              <div><dt>투자 목적</dt><dd>{{ invProfile.investment_goal_display }}</dd></div>
+            </dl>
+            <div class="inv-tags">
+              <span v-for="s in invProfile.sectors_detail" :key="s.code" class="tag">
+                {{ s.name }}
+              </span>
+            </div>
+            <RouterLink to="/investment-profile" class="btn btn-ghost btn-sm">
+              수정하기
+            </RouterLink>
+          </div>
+
+          <!-- 조회 실패 -->
+          <div v-else class="placeholder">
+            <p class="muted">투자 성향 정보를 불러오지 못했습니다.</p>
           </div>
         </div>
 
@@ -313,6 +353,55 @@ async function onLogout() {
 }
 .placeholder {
   padding: 24px 0;
+}
+.inv-cta {
+  margin-top: 18px;
+}
+.inv-result {
+  padding: 4px 0;
+}
+.inv-eyebrow {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+.inv-risk {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.inv-list {
+  margin: 0 0 16px;
+}
+.inv-list > div {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.inv-list > div:last-child {
+  border-bottom: none;
+}
+.inv-list dt {
+  width: 120px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.inv-list dd {
+  margin: 0;
+  font-weight: 500;
+}
+.inv-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.inv-tags .tag {
+  background: var(--surface-3);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
 }
 .profile {
   padding: 28px 22px;

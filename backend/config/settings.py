@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "accounts",
+    "profiles",
+    "stocks",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -142,6 +144,13 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+
+# 토스증권 Open API (F400 시세/종목정보). 실제 키는 backend/.env 로 관리(.gitignore).
+TOSS_API_BASE = os.environ.get("TOSS_API_BASE", "https://openapi.tossinvest.com")
+TOSS_CLIENT_ID = os.environ.get("TOSS_CLIENT_ID", "")
+TOSS_CLIENT_SECRET = os.environ.get("TOSS_CLIENT_SECRET", "")
+TOSS_QUOTE_TTL_SECONDS = int(os.environ.get("TOSS_QUOTE_TTL_SECONDS", "30"))
 
 
 # Internationalization

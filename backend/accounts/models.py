@@ -16,5 +16,6 @@ class User(AbstractUser):
 
     @property
     def has_investment_profile(self) -> bool:
-        """투자성향(F200) 등록 여부. F200 모델이 생기기 전에는 항상 False."""
-        return hasattr(self, "investment_profile")
+        """활성 투자성향(F200) 등록 여부. soft delete(비활성)는 미등록으로 본다."""
+        profile = getattr(self, "investment_profile", None)
+        return profile is not None and profile.is_active
