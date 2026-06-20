@@ -6,6 +6,7 @@ export const useAuthStore = defineStore('auth', () => {
   const access = ref(localStorage.getItem(ACCESS_KEY) || '')
   const refresh = ref(localStorage.getItem(REFRESH_KEY) || '')
   const user = ref(null)
+  const investmentProfile = ref(null)
 
   const isAuthenticated = computed(() => !!access.value)
 
@@ -21,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clear() {
     setTokens('', '')
     user.value = null
+    investmentProfile.value = null
   }
 
   // F102 아이디 중복 확인
@@ -74,10 +76,41 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
+  // F200 투자성향 조회
+  async function fetchInvestmentProfile() {
+    try {
+      const { data } = await api.get('/accounts/investment-profile/')
+      investmentProfile.value = data
+      return data
+    } catch (e) {
+      if (e.response?.status === 404) {
+        investmentProfile.value = null
+        return null
+      }
+      throw e
+    }
+  }
+
+  // F207/F209 투자성향 저장/수정
+  async function saveInvestmentProfile(payload) {
+    const { data } = await api.post('/accounts/investment-profile/', payload)
+    investmentProfile.value = data
+    if (user.value) user.value.has_investment_profile = true
+    return data
+  }
+
+  // F210 투자성향 삭제
+  async function deleteInvestmentProfile() {
+    await api.delete('/accounts/investment-profile/')
+    investmentProfile.value = null
+    if (user.value) user.value.has_investment_profile = false
+  }
+
   return {
     access,
     refresh,
     user,
+    investmentProfile,
     isAuthenticated,
     setTokens,
     clear,
@@ -87,5 +120,8 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchMe,
     updateMe,
+    fetchInvestmentProfile,
+    saveInvestmentProfile,
+    deleteInvestmentProfile,
   }
 })

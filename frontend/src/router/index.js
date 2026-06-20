@@ -32,6 +32,12 @@ const router = createRouter({
       meta: { title: 'AI 종목 추천', requiresAuth: true },
     },
     {
+      path: '/investment-profile',
+      name: 'investment-profile',
+      component: () => import('../views/InvestmentProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/stocks',
       name: 'stocks',
       component: () => import('../views/ComingSoonView.vue'),

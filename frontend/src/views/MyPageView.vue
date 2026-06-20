@@ -1,12 +1,13 @@
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const { user } = storeToRefs(auth)
+const { user, investmentProfile } = storeToRefs(auth)
 const router = useRouter()
+const route = useRoute()
 
 const tabs = [
   { key: 'profile', label: '회원 정보' },
@@ -16,8 +17,10 @@ const tabs = [
 const activeTab = ref('profile')
 
 const loading = ref(true)
+const investmentLoading = ref(true)
 const editing = ref(false)
 const submitting = ref(false)
+const deletingInvestment = ref(false)
 const formError = ref('')
 const errors = reactive({ email: '', current_password: '', new_password: '' })
 
@@ -32,13 +35,26 @@ const joinedDate = computed(() => {
   })
 })
 
+const assetLabel = computed(() => {
+  const value = investmentProfile.value?.available_asset
+  if (!value) return '-'
+  return `${Number(value).toLocaleString('ko-KR')}원`
+})
+
+const industryLabel = computed(() => {
+  const labels = investmentProfile.value?.interest_industry_labels || []
+  return labels.length ? labels.join(', ') : '-'
+})
+
 onMounted(async () => {
+  if (route.query.tab === 'investment') activeTab.value = 'investment'
   try {
-    await auth.fetchMe()
+    await Promise.all([auth.fetchMe(), auth.fetchInvestmentProfile()])
   } catch {
     /* 401 은 인터셉터/가드가 처리 */
   } finally {
     loading.value = false
+    investmentLoading.value = false
   }
 })
 
@@ -91,6 +107,17 @@ async function onSave() {
 async function onLogout() {
   await auth.logout()
   router.push('/')
+}
+
+async function onDeleteInvestmentProfile() {
+  const ok = window.confirm('등록된 투자 성향 정보를 삭제할까요?')
+  if (!ok) return
+  deletingInvestment.value = true
+  try {
+    await auth.deleteInvestmentProfile()
+  } finally {
+    deletingInvestment.value = false
+  }
 }
 </script>
 
@@ -202,12 +229,75 @@ async function onLogout() {
           </div>
         </template>
 
-        <!-- 투자 성향 (F200 예정) -->
+        <!-- 투자 성향 (F200~F210) -->
         <div v-else-if="activeTab === 'investment'" class="card panel">
-          <div class="panel-head"><h2>투자 성향 정보</h2></div>
-          <div class="placeholder">
+          <div class="panel-head">
+            <h2>투자 성향 정보</h2>
+            <button
+              v-if="investmentProfile"
+              class="btn btn-ghost btn-sm"
+              @click="router.push('/investment-profile')"
+            >
+              수정하기
+            </button>
+          </div>
+
+          <p v-if="investmentLoading" class="muted">불러오는 중...</p>
+
+          <div v-else-if="investmentProfile" class="investment-summary">
+            <dl class="info-list">
+              <div class="info-row">
+                <dt>투자 가능 자산</dt>
+                <dd>{{ assetLabel }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>투자 성향</dt>
+                <dd>{{ investmentProfile.risk_type_label }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>투자 기간</dt>
+                <dd>{{ investmentProfile.investment_period_label }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>투자 목적</dt>
+                <dd>{{ investmentProfile.investment_goal_label }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>투자 스타일</dt>
+                <dd>{{ investmentProfile.investment_style_label || '-' }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>관심 산업</dt>
+                <dd>{{ industryLabel }}</dd>
+              </div>
+            </dl>
+            <div class="edit-actions">
+              <button
+                type="button"
+                class="btn btn-ghost"
+                :disabled="deletingInvestment"
+                @click="onDeleteInvestmentProfile"
+              >
+                {{ deletingInvestment ? '삭제 중...' : '삭제하기' }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                @click="router.push('/recommend')"
+              >
+                AI 추천 받기
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="placeholder">
             <p class="muted">아직 투자 성향을 등록하지 않았습니다.</p>
-            <p class="field-hint">투자 성향 설문 기능은 준비 중입니다. (F200)</p>
+            <p class="field-hint">
+              투자 성향을 등록하면 AI 추천에서 자산 규모, 위험도, 투자 기간을 반영합니다.
+            </p>
+            <button class="btn btn-primary" @click="router.push('/investment-profile')">
+              설문 작성하기
+            </button>
           </div>
         </div>
 
@@ -313,6 +403,12 @@ async function onLogout() {
 }
 .placeholder {
   padding: 24px 0;
+}
+.placeholder .btn {
+  margin-top: 14px;
+}
+.investment-summary .edit-actions {
+  margin-top: 20px;
 }
 .profile {
   padding: 28px 22px;
