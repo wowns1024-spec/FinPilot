@@ -4,11 +4,16 @@ import { useRouter, RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useProfileStore } from '@/stores/profile'
+import { useNewsStore } from '@/stores/news'
+import { timeAgo } from '@/utils/datetime'
 
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
 const profileStore = useProfileStore()
 const { profile: invProfile } = storeToRefs(profileStore)
+const newsStore = useNewsStore()
+const { scraps } = storeToRefs(newsStore)
+const scrapsLoading = ref(true)
 const router = useRouter()
 
 const tabs = [
@@ -47,7 +52,24 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  // F505 스크랩 뉴스
+  try {
+    await newsStore.fetchScraps()
+  } catch {
+    /* 무시 */
+  } finally {
+    scrapsLoading.value = false
+  }
 })
+
+async function onUnscrap(articleId) {
+  try {
+    await newsStore.removeScrap(articleId)
+  } catch {
+    /* 무시 */
+  }
+}
 
 function startEdit() {
   form.email = user.value?.email || ''
@@ -251,13 +273,37 @@ async function onLogout() {
           </div>
         </div>
 
-        <!-- 스크랩 뉴스 (F500 예정) -->
+        <!-- 스크랩 뉴스 (F505) -->
         <div v-else class="card panel">
           <div class="panel-head"><h2>스크랩 뉴스</h2></div>
-          <div class="placeholder">
+
+          <p v-if="scrapsLoading" class="muted">불러오는 중...</p>
+
+          <div v-else-if="!scraps.length" class="placeholder">
             <p class="muted">스크랩한 뉴스가 없습니다.</p>
-            <p class="field-hint">뉴스 스크랩 기능은 준비 중입니다. (F500)</p>
+            <p class="field-hint">관심 있는 뉴스를 스크랩하면 여기에 모아볼 수 있습니다.</p>
+            <RouterLink to="/news" class="btn btn-primary inv-cta">뉴스 보러가기</RouterLink>
           </div>
+
+          <ul v-else class="scrap-list">
+            <li v-for="n in scraps" :key="n.id" class="scrap-item">
+              <a :href="n.url" target="_blank" rel="noopener noreferrer" class="scrap-main">
+                <span class="scrap-title">{{ n.title }}</span>
+                <span class="scrap-meta">
+                  <span v-if="n.source">{{ n.source }}</span>
+                  <span v-if="n.published_at">· {{ timeAgo(n.published_at) }}</span>
+                </span>
+              </a>
+              <button
+                type="button"
+                class="scrap-remove"
+                title="스크랩 취소"
+                @click="onUnscrap(n.id)"
+              >
+                ✕
+              </button>
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -402,6 +448,53 @@ async function onLogout() {
   padding: 4px 12px;
   font-size: 13px;
   font-weight: 500;
+}
+.scrap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.scrap-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.scrap-item:last-child {
+  border-bottom: none;
+}
+.scrap-main {
+  flex: 1;
+  min-width: 0;
+}
+.scrap-title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.scrap-main:hover .scrap-title {
+  color: var(--gold);
+}
+.scrap-meta {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.scrap-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.scrap-remove:hover {
+  background: var(--surface-2);
+  color: var(--danger);
 }
 .profile {
   padding: 28px 22px;

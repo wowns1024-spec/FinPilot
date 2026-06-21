@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "profiles",
     "stocks",
     "recommendations",
+    "news",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -173,6 +174,13 @@ NEWS_SUMMARY_TTL_HOURS = int(os.environ.get("NEWS_SUMMARY_TTL_HOURS", "6"))
 NEWS_SUMMARY_LIMIT = int(os.environ.get("NEWS_SUMMARY_LIMIT", "5"))
 NEWS_SUMMARY_TIMEOUT_SECONDS = int(os.environ.get("NEWS_SUMMARY_TIMEOUT_SECONDS", "5"))
 NEWS_RSS_BASE = os.environ.get("NEWS_RSS_BASE") or "https://news.google.com/rss/search"
+
+# F500 뉴스 (목록·검색·종목별·주요·스크랩). RSS(키 불필요)를 스로틀 캐시로 보호한다.
+NEWS_ENABLED = _env_bool("NEWS_ENABLED", True)
+NEWS_LIST_LIMIT = int(os.environ.get("NEWS_LIST_LIMIT", "20"))
+NEWS_LIST_TTL_SECONDS = int(os.environ.get("NEWS_LIST_TTL_SECONDS", "600"))  # 같은 검색어 재호출 억제
+NEWS_LIST_TIMEOUT_SECONDS = int(os.environ.get("NEWS_LIST_TIMEOUT_SECONDS", "5"))
+NEWS_TOP_QUERY = os.environ.get("NEWS_TOP_QUERY") or "증시 OR 코스피 OR 코스닥 OR 주식시장"
 
 
 # Internationalization

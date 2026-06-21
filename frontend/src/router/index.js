@@ -45,7 +45,7 @@ const router = createRouter({
     {
       path: '/news',
       name: 'news',
-      component: () => import('../views/ComingSoonView.vue'),
+      component: () => import('../views/NewsView.vue'),
       meta: { title: '뉴스' },
     },
     {

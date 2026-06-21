@@ -1,10 +1,27 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useNewsStore } from '@/stores/news'
 
 const auth = useAuthStore()
 const { isAuthenticated } = storeToRefs(auth)
+
+// F504 주요 뉴스 (홈 미리보기)
+const newsStore = useNewsStore()
+const news = ref([])
+const newsLoading = ref(true)
+
+onMounted(async () => {
+  try {
+    news.value = await newsStore.fetchNews({ limit: 4 })
+  } catch {
+    news.value = []
+  } finally {
+    newsLoading.value = false
+  }
+})
 </script>
 
 <template>
@@ -36,8 +53,20 @@ const { isAuthenticated } = storeToRefs(auth)
         <p class="muted small">시장 분석 기능은 준비 중입니다. (F700)</p>
       </div>
       <div class="card info-card">
-        <h3>주요 뉴스</h3>
-        <p class="muted small">뉴스 기능은 준비 중입니다. (F500)</p>
+        <div class="info-card-head">
+          <h3>주요 뉴스</h3>
+          <RouterLink to="/news" class="more-link">더보기 →</RouterLink>
+        </div>
+        <p v-if="newsLoading" class="muted small">불러오는 중...</p>
+        <p v-else-if="!news.length" class="muted small">표시할 뉴스가 없습니다.</p>
+        <ul v-else class="news-mini">
+          <li v-for="n in news" :key="n.id">
+            <a :href="n.url" target="_blank" rel="noopener noreferrer" class="news-mini-link">
+              <span class="news-mini-title">{{ n.title }}</span>
+              <span v-if="n.source" class="news-mini-source">{{ n.source }}</span>
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   </section>
@@ -85,6 +114,57 @@ const { isAuthenticated } = storeToRefs(auth)
 .info-card h3 {
   font-size: 16px;
   margin-bottom: 10px;
+}
+.info-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.info-card-head h3 {
+  margin-bottom: 0;
+}
+.more-link {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.more-link:hover {
+  color: var(--gold);
+}
+.news-mini {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.news-mini li {
+  border-top: 1px solid var(--border);
+}
+.news-mini li:first-child {
+  border-top: none;
+}
+.news-mini-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+.news-mini-link:hover .news-mini-title {
+  color: var(--gold);
+}
+.news-mini-title {
+  font-size: 13.5px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.news-mini-source {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 .small {
   font-size: 13px;

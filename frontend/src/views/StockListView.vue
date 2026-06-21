@@ -2,9 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStocksStore } from '@/stores/stocks'
+import { useNewsStore } from '@/stores/news'
+import { timeAgo } from '@/utils/datetime'
 
 const route = useRoute()
 const store = useStocksStore()
+const newsStore = useNewsStore()
+
+const stockNews = ref([])
+const newsLoading = ref(false)
 
 const items = ref([])
 const listLoading = ref(false)
@@ -47,10 +53,23 @@ async function loadDetail(code) {
   }
 }
 
+async function loadNews(code) {
+  newsLoading.value = true
+  stockNews.value = []
+  try {
+    stockNews.value = await newsStore.fetchNews({ stock: code, limit: 5 })
+  } catch {
+    stockNews.value = []
+  } finally {
+    newsLoading.value = false
+  }
+}
+
 function selectStock(code) {
   if (code === selectedCode.value) return
   selectedCode.value = code
   loadDetail(code)
+  loadNews(code)
 }
 
 async function onSearch() {
@@ -172,7 +191,23 @@ const dataTier = computed(() => {
 
           <div class="p-news">
             <p class="p-news-title">관련 뉴스</p>
-            <div class="news-item muted">뉴스 기능은 준비 중입니다. (F500)</div>
+            <div v-if="newsLoading" class="news-item muted">불러오는 중...</div>
+            <div v-else-if="!stockNews.length" class="news-item muted">관련 뉴스가 없습니다.</div>
+            <a
+              v-for="n in stockNews"
+              v-else
+              :key="n.id"
+              :href="n.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="news-item news-link"
+            >
+              <span class="news-link-title">{{ n.title }}</span>
+              <span class="news-link-meta">
+                <span v-if="n.source">{{ n.source }}</span>
+                <span v-if="n.published_at">· {{ timeAgo(n.published_at) }}</span>
+              </span>
+            </a>
           </div>
         </template>
         <p v-else class="muted state">종목을 선택하세요.</p>
@@ -430,6 +465,31 @@ const dataTier = computed(() => {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   font-size: 13.5px;
+}
+.news-link {
+  display: block;
+  margin-bottom: 8px;
+  transition: border-color 0.12s;
+}
+.news-link:last-child {
+  margin-bottom: 0;
+}
+.news-link:hover {
+  border-color: var(--gold);
+}
+.news-link-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  color: var(--text);
+}
+.news-link-meta {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 @media (max-width: 860px) {
