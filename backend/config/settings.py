@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "accounts",
     "investments",
+    "news",
     "recommendations",
     "stocks",
     "django.contrib.admin",
@@ -184,3 +185,9 @@ TOSS_CLIENT_SECRET = os.environ.get(
     "TOSS_CLIENT_SECRET", os.environ.get("TOSS_API_KEY", "")
 )
 TOSS_ACCESS_TOKEN = os.environ.get("TOSS_ACCESS_TOKEN", "")
+
+NAVER_SEARCH_API_URL = os.environ.get(
+    "NAVER_SEARCH_API_URL", "https://openapi.naver.com/v1/search/news.json"
+)
+NAVER_CLIENT_ID = os.environ.get("NAVER_CLIENT_ID", "")
+NAVER_CLIENT_SECRET = os.environ.get("NAVER_CLIENT_SECRET", "")

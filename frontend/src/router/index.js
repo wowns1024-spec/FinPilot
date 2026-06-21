@@ -24,7 +24,6 @@ const router = createRouter({
       component: () => import('../views/MyPageView.vue'),
       meta: { requiresAuth: true },
     },
-    // F200~F700: 추후 구현 (네비게이션 자리표시자)
     {
       path: '/recommend',
       name: 'recommend',
@@ -45,8 +44,7 @@ const router = createRouter({
     {
       path: '/news',
       name: 'news',
-      component: () => import('../views/ComingSoonView.vue'),
-      meta: { title: '뉴스' },
+      component: () => import('../views/NewsView.vue'),
     },
     {
       path: '/terms',
