@@ -1,10 +1,11 @@
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from profiles.models import Sector
 
 from . import services
-from .models import Stock
+from .models import Quote, Stock
 from .toss import TossError
 
 
@@ -72,6 +73,13 @@ class StockApiTests(APITestCase):
         self.assertEqual(row["price"], "72000")
         self.assertEqual(row["sector"], "반도체")
 
+    def test_list_includes_change_rate_without_detail_click(self):
+        # 상세를 한 번도 열지 않아도 목록에서 등락률이 계산돼 내려와야 한다.
+        res = self.client.get("/api/v1/stocks/")
+        row = next(r for r in res.data["results"] if r["code"] == "005930")
+        self.assertAlmostEqual(row["change_rate"], (72000 - 70000) / 70000, places=4)
+        self.assertEqual(row["change_direction"], "UP")
+
     def test_filter_market_and_sector(self):
         self.assertEqual(self.client.get("/api/v1/stocks/?sector=SEMICONDUCTOR").data["count"], 2)
         self.assertEqual(self.client.get("/api/v1/stocks/?market=KOSDAQ").data["count"], 0)
@@ -113,6 +121,21 @@ class StockApiTests(APITestCase):
         res = self.client.get("/api/v1/stocks/")
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data["count"], 2)
+
+    def test_empty_candles_marked_and_not_refetched_same_day(self):
+        # 토스가 일봉을 주지 않는 종목도 '오늘 시도함'으로 기록해, 같은 날 재요청엔 외부 호출하지 않는다.
+        calls = []
+
+        class Counting(FakeProvider):
+            def get_candles(self, symbol, interval="1d", count=2):
+                calls.append(symbol)
+                return super().get_candles(symbol, interval, count)
+
+        services.set_provider(Counting())  # 캔들 데이터 없음(빈 응답)
+        services.ensure_daily_candles([self.s1])
+        services.ensure_daily_candles([self.s1])
+        self.assertEqual(calls, ["005930"])  # 두 번째는 호출 생략
+        self.assertEqual(Quote.objects.get(stock=self.s1).daily_as_of, timezone.localdate())
 
     def test_sectors_endpoint_public(self):
         res = self.client.get("/api/v1/stocks/sectors/")

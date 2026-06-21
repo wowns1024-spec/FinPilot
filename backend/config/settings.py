@@ -22,6 +22,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -46,6 +53,7 @@ INSTALLED_APPS = [
     "accounts",
     "profiles",
     "stocks",
+    "recommendations",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -151,6 +159,20 @@ TOSS_API_BASE = os.environ.get("TOSS_API_BASE", "https://openapi.tossinvest.com"
 TOSS_CLIENT_ID = os.environ.get("TOSS_CLIENT_ID", "")
 TOSS_CLIENT_SECRET = os.environ.get("TOSS_CLIENT_SECRET", "")
 TOSS_QUOTE_TTL_SECONDS = int(os.environ.get("TOSS_QUOTE_TTL_SECONDS", "30"))
+
+# SSAFY GMS API (F300 추천 이유 자연어 생성). 키 미설정 시 규칙기반 템플릿으로 폴백.
+GMS_API_BASE = os.environ.get("GMS_API_BASE") or "https://gms.ssafy.io/gmsapi"
+GMS_API_KEY = os.environ.get("GMS_API_KEY", "")
+GMS_MODEL = os.environ.get("GMS_MODEL") or "gpt-4.1"
+
+# F300 추천 파라미터
+RECOMMENDATION_TOP_N = int(os.environ.get("RECOMMENDATION_TOP_N", "5"))
+METRIC_WINDOW = int(os.environ.get("METRIC_WINDOW", "60"))  # 지표 계산에 쓸 일봉 수
+NEWS_SUMMARY_ENABLED = _env_bool("NEWS_SUMMARY_ENABLED", True)
+NEWS_SUMMARY_TTL_HOURS = int(os.environ.get("NEWS_SUMMARY_TTL_HOURS", "6"))
+NEWS_SUMMARY_LIMIT = int(os.environ.get("NEWS_SUMMARY_LIMIT", "5"))
+NEWS_SUMMARY_TIMEOUT_SECONDS = int(os.environ.get("NEWS_SUMMARY_TIMEOUT_SECONDS", "5"))
+NEWS_RSS_BASE = os.environ.get("NEWS_RSS_BASE") or "https://news.google.com/rss/search"
 
 
 # Internationalization

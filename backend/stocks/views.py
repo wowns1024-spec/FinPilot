@@ -53,6 +53,8 @@ class StockListView(APIView):
         page = paginator.paginate_queryset(qs, request)
         # 페이지 종목만 시세 갱신(TTL 지난 것만). 실패해도 캐시값/None 으로 표시(F401 예외처리).
         services.ensure_fresh_prices(page)
+        # 전일종가(일봉)까지 채워 등락률을 목록에서 바로 표시(상세 클릭 전에도). 종목당 하루 1회.
+        services.ensure_daily_candles(page)
         quotes = {q.stock_id: q for q in Quote.objects.filter(stock__in=page)}
         items = [services.serialize_list_item(s, quotes.get(s.id)) for s in page]
         return paginator.get_paginated_response(items)

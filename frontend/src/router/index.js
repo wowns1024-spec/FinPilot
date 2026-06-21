@@ -34,7 +34,7 @@ const router = createRouter({
     {
       path: '/recommend',
       name: 'recommend',
-      component: () => import('../views/ComingSoonView.vue'),
+      component: () => import('../views/RecommendView.vue'),
       meta: { title: 'AI 종목 추천', requiresAuth: true },
     },
     {

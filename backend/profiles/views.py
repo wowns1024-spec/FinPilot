@@ -3,6 +3,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from recommendations.services import invalidate_for_user
+
 from .models import InvestmentProfile, Sector
 from .serializers import InvestmentProfileSerializer, SectorSerializer
 
@@ -61,6 +63,8 @@ class InvestmentProfileView(APIView):
                 defaults={**data, "is_active": True},
             )
             profile.sectors.set(sectors)
+        # 프로필이 바뀌면 기존 추천은 더 이상 유효하지 않다 (F300)
+        invalidate_for_user(request.user)
         return Response(
             InvestmentProfileSerializer(profile).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -82,7 +86,7 @@ class InvestmentProfileView(APIView):
             profile.save()
             if sectors is not None:
                 profile.sectors.set(sectors)
-        # TODO(F300): 추천 캐시 무효화
+        invalidate_for_user(request.user)  # 프로필 변경 → 기존 추천 무효화 (F300)
         return Response(InvestmentProfileSerializer(profile).data)
 
     def delete(self, request):
@@ -95,7 +99,7 @@ class InvestmentProfileView(APIView):
         # soft delete: 행을 지우지 않고 비활성화 (F210)
         profile.is_active = False
         profile.save(update_fields=["is_active", "updated_at"])
-        # TODO(F300): 신규 추천 차단 / 기존 추천 결과 무효화
+        invalidate_for_user(request.user)  # 성향 삭제 → 기존 추천 무효화 (F300)
         return Response(
             {
                 "message": "투자성향이 삭제되었습니다. 추천을 받으려면 다시 설문을 진행해 주세요."

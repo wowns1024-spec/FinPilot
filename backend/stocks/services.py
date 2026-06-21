@@ -1,5 +1,6 @@
 """F400 시세 서비스. 시세 캐시(TTL)·외부 장애 폴백·등락률·시가총액 계산을 담당한다."""
 
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
@@ -10,6 +11,10 @@ from .models import Quote
 from .toss import TossClient, TossError
 
 _provider = None
+
+# 토스 캔들은 종목당 단건 호출이라 동시성을 높이면 레이트리밋에 걸려 오히려 실패가 늘어난다
+# (관측: 8워커→성공 22/37, 16워커→10/37). 낮게 유지하고 부족분은 sync_daily 재시도로 메운다.
+_CANDLE_WORKERS = 4
 
 
 def market_provider():
@@ -91,30 +96,98 @@ def ensure_fresh_prices(stocks):
     return not refresh_prices(stale)
 
 
-def ensure_daily(stock):
-    """전일종가·당일거래량(candles)과 발행주식수(stocks)를 채운다. 오늘 이미 있으면 생략."""
-    quote, _ = Quote.objects.get_or_create(stock=stock)
-    today = timezone.localdate()
-    if quote.daily_as_of != today or quote.prev_close is None:
+def fetch_candles_batch(stocks, interval="1d", count=2):
+    """여러 종목의 캔들을 배치로 받아 ``{stock.id: candles}`` 반환(캔들은 최신순 리스트).
+
+    토스 캔들은 종목당 단건 호출이라, 첫 종목을 동기로 받아 토큰을 캐시에 올린 뒤 나머지를
+    낮은 동시성(`_CANDLE_WORKERS`)으로 병렬 호출한다(레이트리밋·토큰 동시 재발급 방지).
+    전송 실패(TossError)한 종목은 결과에서 빠진다(빈 응답 ``[]`` 과 구분). 시세 등락률용
+    일봉(F400)·지표 계산용 장기 일봉(F300)이 공유한다.
+    """
+    stocks = list(stocks)
+    if not stocks:
+        return {}
+    provider = market_provider()
+
+    def _fetch(stock):
         try:
-            candles = market_provider().get_candles(stock.code, "1d", 2)
-            if candles:
-                quote.volume = _dec(candles[0].get("volume"))
-                if len(candles) >= 2:
-                    quote.prev_close = _dec(candles[1].get("closePrice"))
-                quote.daily_as_of = today
-                quote.save()
+            return stock.id, provider.get_candles(stock.code, interval, count)
         except TossError:
-            pass  # 폴백: 기존값 유지
-    if stock.shares_outstanding is None:
+            return stock.id, None
+
+    results = [_fetch(stocks[0])]
+    if len(stocks) > 1:
+        with ThreadPoolExecutor(max_workers=min(_CANDLE_WORKERS, len(stocks) - 1)) as pool:
+            results.extend(pool.map(_fetch, stocks[1:]))
+    return {sid: candles for sid, candles in results if candles is not None}
+
+
+def ensure_daily_candles(stocks):
+    """전일종가·당일거래량(일봉)을 채운다. 종목당 하루 1회만 외부 호출(오늘치 있으면 생략).
+
+    목록(F401 등락률 표시)·상세(F404) 공통. 아침마다 ``manage.py sync_daily`` 로 미리
+    채워 두면 첫 요청도 외부 호출 없이 빠르다.
+    """
+    stocks = list(stocks)
+    if not stocks:
+        return
+    today = timezone.localdate()
+    quotes = {q.stock_id: q for q in Quote.objects.filter(stock__in=stocks)}
+
+    def _has_today(stock):
+        # daily_as_of 가 오늘이면 '오늘 이미 시도함'. 토스에 일봉이 없어 prev_close 가 비는
+        # 종목까지 매 요청 재호출하지 않도록, 성공·빈응답 모두 오늘로 기록한다(전송 실패는 제외).
+        q = quotes.get(stock.id)
+        return q is not None and q.daily_as_of == today
+
+    stale = [s for s in stocks if not _has_today(s)]
+    if not stale:
+        return
+
+    fetched = fetch_candles_batch(stale, "1d", 2)  # {id: candles}, 전송 실패 종목은 빠짐
+    for stock in stale:
+        if stock.id not in fetched:
+            continue  # 전송 실패 → 오늘로 표시하지 않고 다음 요청에서 재시도
+        candles = fetched[stock.id]
+        quote = quotes.get(stock.id)
+        if quote is None:
+            quote, _ = Quote.objects.get_or_create(stock=stock)
+        if candles:  # 빈 응답이면 값은 그대로 두고 '오늘 시도함'만 기록
+            quote.volume = _dec(candles[0].get("volume"))
+            if len(candles) >= 2:
+                quote.prev_close = _dec(candles[1].get("closePrice"))
+        quote.daily_as_of = today
+        quote.save()
+
+
+def ensure_shares_outstanding(stocks):
+    """발행주식수(시가총액 계산용)가 비어 있는 종목을 토스 종목정보로 한 번에 채운다.
+
+    ``get_stocks`` 는 다건(최대 200) 배치라 유니버스 전체도 한 번의 호출로 끝난다.
+    """
+    missing = [s for s in stocks if s.shares_outstanding is None]
+    if not missing:
+        return
+    try:
+        info = market_provider().get_stocks([s.code for s in missing])
+    except TossError:
+        return  # 폴백: 다음 기회에
+    for stock in missing:
+        data = info.get(stock.code)
+        if not data or not data.get("sharesOutstanding"):
+            continue
         try:
-            info = market_provider().get_stocks([stock.code]).get(stock.code)
-            if info and info.get("sharesOutstanding"):
-                stock.shares_outstanding = int(Decimal(str(info["sharesOutstanding"])))
-                stock.save(update_fields=["shares_outstanding"])
-        except (TossError, InvalidOperation, ValueError):
+            stock.shares_outstanding = int(Decimal(str(data["sharesOutstanding"])))
+            stock.save(update_fields=["shares_outstanding"])
+        except (InvalidOperation, ValueError):
             pass
-    return quote
+
+
+def ensure_daily(stock):
+    """상세용: 전일종가·거래량(일봉) + 발행주식수(시총 계산용)를 채운다."""
+    ensure_daily_candles([stock])
+    ensure_shares_outstanding([stock])
+    return Quote.objects.filter(stock=stock).first()
 
 
 # --- 표시 포맷 / 직렬화 ---
